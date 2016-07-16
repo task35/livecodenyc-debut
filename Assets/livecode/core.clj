@@ -104,6 +104,14 @@
    (move-to obj (v3+ (.. obj transform position) offs)
             speed)))
 
+(defn raise-tile [x y h]
+  (let [t (tile-at x y)]
+    (move-by t (v3 0 h 0) 5)))
+
+(defn reset-tile [x y]
+  (let [t (tile-at x y)]
+    (move-by t (v3 0 (- 0 (.. t transform position y) 0.5) 0) 5)))
+
 (defn set-gravity [g]
   (doseq [rb (objects-typed Rigidbody)]
     (set! (.useGravity rb) g)))
