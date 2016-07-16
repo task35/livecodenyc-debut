@@ -20,7 +20,7 @@
          (apply hash-map))))
 
 (defn tile-at [x y]
-  (coordinates-map [x y]))
+  (coordinates-map [(int x) (int y)]))
 
 (defn import-namespace [n]
   (->> AppDomain/CurrentDomain
@@ -52,6 +52,17 @@
     (set! (.isKinematic rb) true)
     (set! (.sharedMesh mc)
           (-> obj children first (cmpt MeshFilter) .mesh))
+    obj))
+
+(defn physical [obj]
+  (let [rb (cmpt+ obj Rigidbody)
+        sc (cmpt+ obj SphereCollider)]
+    (set! (.useGravity rb) true)
+    (set! (.isKinematic rb) false)
+    (set! (.radius sc)
+          
+          (-> obj children first (cmpt MeshFilter) .mesh .bounds .max .magnitude)
+          )
     obj))
 
 (defn impulse [o v]
@@ -134,7 +145,7 @@
   ([x y] (reset-tile x y *tile-speed*))
   ([x y speed]
    (let [t (tile-at x y)]
-     (move-by t (v3 0 (- 0 (.. t transform position y) 0.5) 0) speed))))
+     (move-by t (v3 0 (- 0 (.. t transform position y) 5.5) 0) speed))))
 
 (defn goal-post [w z h]
   (raise-tile (- w) z h)
@@ -161,6 +172,7 @@
 
 (defn set-confetti [c]
   (let [ps (cmpt (object-named "confetti") ParticleSystem)]
+    (if c (.Play ps))
     (set! (.enableEmission ps) c)))
 
 (defn set-flight [f]
@@ -185,3 +197,7 @@
 (defn stop-reset []
   (stop-coroutines)
   (reset-all-tiles))
+
+(defn big-text [s]
+  (set! (.text (cmpt (object-named "big-text") GUIText))
+        s))
