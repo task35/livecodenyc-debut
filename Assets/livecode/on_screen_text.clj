@@ -5,6 +5,7 @@
     [UnityEngine GameObject]
     [UnityEngine.UI Text]))
 
+(def max-characters 10000)
 (def max-text-height 60)
 
 (defn left-text [] (.. (object-named "Left Text") (GetComponent Text)))
@@ -40,10 +41,13 @@
   (text! txt (string/replace (text txt) #"^</color>\s+" "")))
 
 (defn push [txt s]
-  (let [s (string/replace s #"=> " "=>\n")]
-    (text! txt (str (text txt) "\n" s))
-    (drop-top txt (inc (- (lines txt) max-text-height)))
-    (clean-up txt)))
+  (let [s (if (> (count s) max-characters)
+            "..."
+            s)]
+    (let [s (string/replace s #"=> " "=>\n")]
+      (text! txt (str (text txt) "\n" s))
+      (drop-top txt (inc (- (lines txt) max-text-height)))
+      (clean-up txt))))
 
 (def default-theme
   [

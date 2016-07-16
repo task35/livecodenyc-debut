@@ -7,7 +7,14 @@
   (:import [UnityEngine Rigidbody Vector3 Vector2 GameObject Component Transform]
            [clojure.lang Var]
            IEnumerator
-           ArcadiaState))
+           ArcadiaState
+           Helpers))
+
+(defn tile-at [x y]
+  (Helpers/Raycast
+    (v3 x 10 y)
+    (v3 0 -1 0)
+    9))
 
 (defn import-namespace [n]
   (->> AppDomain/CurrentDomain
@@ -98,7 +105,7 @@
 
 (defn set-gravity [g]
   (doseq [rb (objects-typed Rigidbody)]
-    (set! (.useGravity rb) g)))1
+    (set! (.useGravity rb) g)))
 
 (defn set-confetti [c]
   (let [ps (cmpt (object-named "confetti") ParticleSystem)]
