@@ -10,12 +10,17 @@
            ArcadiaState
            Helpers))
 
+(defn coordinates [o]
+  ((juxt #(int (.x %)) #(int (.z %))) (.. o transform position)))
+
+(def coordinates-map
+  (let [ch (children (object-named "Tiles"))]
+    (->> ch
+         (interleave (map coordinates ch))
+         (apply hash-map))))
+
 (defn tile-at [x y]
-  (Helpers/RaycastAll
-    (Ray.
-      (v3 x 100 y)
-      (v3 0 -1 0))
-    9))
+  (coordinates-map [x y]))
 
 (defn import-namespace [n]
   (->> AppDomain/CurrentDomain
@@ -118,7 +123,14 @@
    (let [t (tile-at x y)]
      (move-by t (v3 0 h 0) speed))))
 
+(defn set-tile-height
+  ([v h] (set-tile-height (.x v) (.y v) h))
+  ([x y h]
+   (let [t (tile-at x y)]
+     (position! t (v3 x h y)))))
+
 (defn reset-tile
+  ([v] (reset-tile (.x v) (.y v)))
   ([x y] (reset-tile x y *tile-speed*))
   ([x y speed]
    (let [t (tile-at x y)]
@@ -165,3 +177,11 @@
       (fn []
         (f)
         (< Time/time stop-time)))))
+
+(defn sleep-all []
+  (doseq [rb (objects-typed Rigidbody)]
+    (.Sleep rb)))
+
+(defn stop-reset []
+  (stop-coroutines)
+  (reset-all-tiles))
