@@ -11,9 +11,9 @@
             (rand))))
 
 (def directions
-  {"left" (v3 -0.5 0 0)
-   "right" (v3 0.5 0 0)
-   "top" (v3 0 0 0.5)
+  {"left"   (v3 -0.5 0 0)
+   "right"  (v3 0.5 0 0)
+   "top"    (v3 0 0 0.5)
    "bottom" (v3 0 0 -0.5)
    "center" (v3 0 0.5 0)})
 
