@@ -112,6 +112,9 @@
   (let [t (tile-at x y)]
     (move-by t (v3 0 (- 0 (.. t transform position y) 0.5) 0) 5)))
 
+(defn stop-coroutines []
+  (.StopAllCoroutines coro-root))
+
 (defn set-gravity [g]
   (doseq [rb (objects-typed Rigidbody)]
     (set! (.useGravity rb) g)))
