@@ -1,5 +1,7 @@
 (ns livecode.core
-  (:require [livecode.buddy :as bud])
+  (:require [livecode.buddy :as bud]
+            [clojure.string :as string]
+            [arcadia.internal.name-utils :refer [camels-to-hyphens]])
   (:use arcadia.core
         arcadia.linear)
   (:import [UnityEngine Rigidbody Vector3 Vector2 GameObject Component Transform]
@@ -17,6 +19,21 @@
        dorun))
 
 (import-namespace "UnityEngine")
+
+(def solids
+  (->> (Resources/LoadAll "Polyhedra")
+       (filter #(= (type %) GameObject))
+       (mapcat (fn [s] [(keyword (-> s .name camels-to-hyphens string/lower-case))
+                        s]))
+       (apply hash-map)))
+
+(defn solid
+  ([position] (solid (-> solids keys rand-nth) position))
+  ([name position]
+   (let [p (instantiate (solids name) position)]
+     (cmpt+ p MeshCollider)
+     (cmpt+ p Rigidbody)
+     p)))
 
 (def coro-root (cmpt Camera/main ArcadiaState))
 
