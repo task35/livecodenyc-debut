@@ -55,3 +55,12 @@
     assoc "center" (if f
                      (v3 0 0.5 0)
                      (v3 0))))
+(def sun
+  (object-named "Directional Light"))
+
+(defn until-time [f ms]
+  (let [stop-time (+ Time/time ms)]
+    (livecode.core/animate
+      (fn []
+        (f)
+        (< Time/time stop-time)))))
