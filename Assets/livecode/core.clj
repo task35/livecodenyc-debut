@@ -19,8 +19,11 @@
          (interleave (map coordinates ch))
          (apply hash-map))))
 
-(defn tile-at [x y]
-  (coordinates-map [(int x) (int y)]))
+(defn tile-at
+  ([v]
+   (tile-at (.x v) (.y v)))
+  ([x y]
+   (coordinates-map [(int x) (int y)])))
 
 (defn import-namespace [n]
   (->> AppDomain/CurrentDomain
@@ -200,4 +203,72 @@
 
 (defn big-text [s]
   (set! (.text (cmpt (object-named "big-text") GUIText))
-        s))
+    s))
+
+;; ==================================================
+
+(defn v2-dist [a b]
+  (Vector2/Distance a b))
+
+(defmacro v2dest [[x y v] & body]
+  `(let [v# ~v
+         ~x (.x v#)
+         ~y (.y v#)]
+     ~@body))
+
+(definline v2-inv [v]
+  `(let [v# ~v]
+     (v2 (/ 1 (.x v#)) (/ 1 (.y v#)))))
+
+(defn raise-tile-to
+  ([v h] (raise-tile-to (.x v) (.y v) h))
+  ([x y h] (raise-tile-to x y h *tile-speed*))
+  ([x y h speed]
+   (let [t (tile-at x y)]
+     (with-cmpt t [tr Transform]
+       (move-to t
+         (v3
+           (.. tr position x)
+           (- h 5.5)
+           (.. tr position z))
+         speed)))))
+
+(defn wall-to [start hop len height]
+  (dorun
+    (for [v (take len (iterate #(v2+ % hop) start))]
+      (raise-tile-to v height))))
+
+(defn box [start extension height]
+  (let [box-breadth (.x extension)
+        box-depth (.y extension)
+        other-corner (v2+ start (v2+ start extension (v2 -1)))]
+    (wall-to start        (v2  0  1) box-depth height)
+    (wall-to start        (v2  1  0) box-breadth height)
+    (wall-to other-corner (v2  0 -1) box-depth height)
+    (wall-to other-corner (v2 -1  0) box-breadth height)))
+
+(defn block [start extension height]
+  (dorun (for [x (range (.x extension))
+               z (range (.y extension))]
+           (raise-tile-to (v2+ start (v2 x z)) height))))
+
+(defn on-block [start extension f]
+  (dorun
+    (for [x (range (.x extension))
+          y (range (.y extension))
+          :let [pos (v2+ start (v2 x y))]]
+      (raise-tile-to pos (f pos)))))
+
+(defn block-t [start extension t f]
+  (let [start-time Time/time]
+    (animate
+      (fn []
+        (when (< Time/time (+ start-time t))
+          (let [tdiff (- Time/time start-time)]
+            (dotimes [xi (.x extension)]
+              (dotimes [yi (.y extension)]
+                (let [pos (v2+ start (v2 xi yi))]
+                  (set-with! (tile-at pos) [tpos transform position]
+                    (let [h (f (v2 (.x tpos) (.y tpos)) tdiff)]
+                      (v3 (.x tpos) h (.z tpos)))))))))))))
+
