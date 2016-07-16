@@ -30,10 +30,19 @@
 (defn solid
   ([position] (solid (-> solids keys rand-nth) position))
   ([name position]
-   (let [p (instantiate (solids name) position)]
-     (cmpt+ p MeshCollider)
-     (cmpt+ p Rigidbody)
-     p)))
+   (instantiate (solids name) position)))
+
+(defn mesh-collides [obj]
+  (let [rb (cmpt+ obj Rigidbody)
+        mc (cmpt+ obj MeshCollider)]
+    (set! (.useGravity rb) false)
+    (set! (.isKinematic rb) true)
+    (set! (.sharedMesh mc)
+          (-> obj children first (cmpt MeshFilter) .mesh))
+    obj))
+
+(defn impulse [o v]
+  (.AddForce (cmpt o Rigidbody) v ForceMode/Impulse))
 
 (def coro-root (cmpt Camera/main ArcadiaState))
 
@@ -58,6 +67,34 @@
                       (vreset! v r)))
                   (< @i (count fns)))
         (get_Current [this] @v)))))
+
+(defn once [f] (fn [] (f) false))
+
+(defn translate [obj v]
+  (if-let [rb (cmpt obj Rigidbody)]
+    (.MovePosition rb (v3+ (.position rb) v))
+    (.. obj translate (Translate v) Space/World)))
+
+(defn move-to
+  ([obj pos] (move-to obj pos 1))
+  ([obj pos speed]
+   (let [opos (.. obj transform position)
+         distance (Vector3/Distance opos pos)
+         dir (-> (v3- pos opos)
+                 .normalized
+                 (v3* speed))]
+     (timeline
+       [(fn []
+          (translate obj (v3* dir Time/deltaTime))
+          (> (Vector3/Distance (.. obj transform position) pos)
+             (* Time/deltaTime speed)))
+        (once #(set! (.. obj transform position) pos))]))))
+
+(defn move-by
+  ([obj offs] (move-by obj offs 1))
+  ([obj offs speed]
+   (move-to obj (v3+ (.. obj transform position) offs)
+            speed)))
 
 (defn set-gravity [g]
   (doseq [rb (objects-typed Rigidbody)]
