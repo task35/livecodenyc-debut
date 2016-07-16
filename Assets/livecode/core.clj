@@ -1,4 +1,5 @@
 (ns livecode.core
+  (:require [livecode.buddy :as bud])
   (:use arcadia.core
         arcadia.linear)
   (:import [UnityEngine Rigidbody Vector3 Vector2 GameObject Component Transform]
@@ -16,8 +17,6 @@
        dorun))
 
 (import-namespace "UnityEngine")
-
-(state (.gameObject Camera/main))
 
 (def coro-root (cmpt Camera/main ArcadiaState))
 
@@ -42,3 +41,17 @@
                       (vreset! v r)))
                   (< @i (count fns)))
         (get_Current [this] @v)))))
+
+(defn set-gravity [g]
+  (doseq [rb (objects-typed Rigidbody)]
+    (set! (.useGravity rb) g)))1
+
+(defn set-confetti [c]
+  (let [ps (cmpt (object-named "confetti") ParticleSystem)]
+    (set! (.enableEmission ps) c)))
+
+(defn set-flight [f]
+  (swap! bud/directions
+    assoc "center" (if f
+                     (v3 0 0.5 0)
+                     (v3 0))))
