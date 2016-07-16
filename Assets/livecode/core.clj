@@ -205,6 +205,105 @@
   (set! (.text (cmpt (object-named "big-text") GUIText))
     s))
 
+;; ============================================================
+;; fun macros
+
+(defmacro set-with! [obj [sym & props] & body]
+  `(let [obj# ~obj
+         ~sym (.. obj# ~@props)]
+     (set! (.. obj# ~@props) (do ~@body))))
+
+(defmacro when-set!
+  ([obj k v]
+   (let [objsym (gensym "obj__")
+         access (if (symbol? k)
+                  `(. ~objsym ~k)
+                  `(.. ~objsym ~@k))]
+     `(let [~objsym ~obj]
+        (when-let [v# ~v]
+          (set! ~access v#)))))
+  ([obj k v & kvs]
+   (assert (even? (count kvs)))
+   (let [objsym (gensym "obj__")]
+     `(let [~objsym ~obj]
+        ~@(for [[k v] (partition 2 (list* k v kvs))]
+            `(when-set! ~objsym ~k ~v))))))
+
+;; yes but you too are gross
+(defmacro if-in-let
+  ([m [n k] then]
+   `(when-let [e# (find ~m ~k)]
+      (let [~n (val e#)]
+        ~then)))
+  ([m [n k] then else]
+   `(if-let [e# (find ~m ~k)]
+      (let [~n (val e#)]
+        ~then)
+      ~else)))
+
+;; murp.
+(defmacro when-in-set!
+  ([obj map path key]
+   (let [objsym (gensym "obj__")
+         access (if (symbol? path)
+                  `(. ~objsym ~path)
+                  `(.. ~objsym ~@path))]
+     `(let [~objsym ~obj] 
+        (if-in-let ~map [v# ~key]
+          (set! ~access v#)))))
+  ([obj map path key & path-keys]
+   (let [objsym (gensym "obj__")
+         mapsym (gensym "map__")]
+     `(let [~objsym ~obj
+            ~mapsym ~map]
+        ~@(for [[path key] (partition 2 (list* path key path-keys))]
+            `(when-in-set! ~objsym ~mapsym ~path ~key))))))
+
+;; ============================================================
+;; physics!
+
+;; not that we use this anywhere
+(defn fm-convert [x]
+  (case x
+    :force ForceMode/Force
+    :acceleration ForceMode/Acceleration
+    :impulse ForceMode/Impulse
+    :velocity-change ForceMode/VelocityChange
+    x))
+
+(defn pmc-convert [x]
+  (case x
+    :average PhysicMaterialCombine/Average
+    :minimum PhysicMaterialCombine/Minimum
+    :multiply PhysicMaterialCombine/Multiply
+    :maximum PhysicMaterialCombine/Maximum
+    x))
+
+(defn physic-material ^PhysicMaterial [m]
+  (let [^PhysicMaterial pm (PhysicMaterial.)
+        m2 (as-> m m
+             (if (contains? m :bounce-combine)
+               (update m :bounce-combine pmc-convert)
+               m)
+             (if (contains? m :friction-combine)
+               (update m :friction-combine pmc-convert)
+               m))]
+    (when-in-set! pm m2
+      bounceCombine :bounce-combine
+      bounciness :bounciness
+      frictionCombine :friction-combine
+      staticFriction :static-friction
+      dynamicFriction :dynamic-friction)
+    pm))
+
+(def bouncer
+  (physic-material
+    {:bounciness 0.9
+     :bounce-combine :average
+     :dynamic-friction 0
+     :friction-combine :minimum}))
+
+
 ;; ==================================================
 
 (defn v2-dist [a b]
@@ -268,7 +367,10 @@
             (dotimes [xi (.x extension)]
               (dotimes [yi (.y extension)]
                 (let [pos (v2+ start (v2 xi yi))]
-                  (set-with! (tile-at pos) [tpos transform position]
-                    (let [h (f (v2 (.x tpos) (.y tpos)) tdiff)]
-                      (v3 (.x tpos) h (.z tpos)))))))))))))
+                  (let [tile (tile-at pos)
+                        tpos (.. tile transform position)]
+                    (when-let [h (f (v2 (.x tpos) (.y tpos)) tdiff)]
+                      (set! (.. tile transform position)
+                        (v3 (.x tpos) h (.z tpos)))))))))
+          true)))))
 
