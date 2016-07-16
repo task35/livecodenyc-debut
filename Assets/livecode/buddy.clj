@@ -11,11 +11,12 @@
             (rand))))
 
 (def directions
-  {"left"   (v3 -0.5 0 0)
-   "right"  (v3 0.5 0 0)
-   "top"    (v3 0 0 0.5)
-   "bottom" (v3 0 0 -0.5)
-   "center" (v3 0 0.5 0)})
+  (atom
+    {"left"   (v3 -0.5 0 0)
+     "right"  (v3 0.5 0 0)
+     "top"    (v3 0 0 0.5)
+     "bottom" (v3 0 0 -0.5)
+     "center" (v3 0 0.5 0)}))
 
 (defn apply-movement [go dir]
   (.AddForce (cmpt go Rigidbody)
@@ -25,5 +26,5 @@
 (defn move [go]
   (let [buttons @net/buttons
         button (-> go .name buttons)]
-    (if-let [dir (directions button)]
+    (if-let [dir (@directions button)]
       (apply-movement go dir))))
