@@ -10,12 +10,17 @@
            ArcadiaState
            Helpers))
 
+(defn coordinates [o]
+  ((juxt #(int (.x %)) #(int (.z %))) (.. o transform position)))
+
+(def coordinates-map
+  (let [ch (children (object-named "Tiles"))]
+    (->> ch
+         (interleave (map coordinates ch))
+         (apply hash-map))))
+
 (defn tile-at [x y]
-  (Helpers/RaycastAll
-    (Ray.
-      (v3 x 100 y)
-      (v3 0 -1 0))
-    9))
+  (coordinates-map [x y]))
 
 (defn import-namespace [n]
   (->> AppDomain/CurrentDomain
@@ -83,6 +88,11 @@
     (.MovePosition rb (v3+ (.position rb) v))
     (.. obj translate (Translate v) Space/World)))
 
+(defn position! [obj p]
+  (if-let [rb (cmpt obj Rigidbody)]
+    (.MovePosition rb p)
+    (set! (.. obj translate position) p)))
+
 (defn move-to
   ([obj pos] (move-to obj pos 1))
   ([obj pos speed]
@@ -104,13 +114,43 @@
    (move-to obj (v3+ (.. obj transform position) offs)
             speed)))
 
-(defn raise-tile [x y h]
-  (let [t (tile-at x y)]
-    (move-by t (v3 0 h 0) 5)))
+(def ^:dynamic *tile-speed* 5)
 
-(defn reset-tile [x y]
-  (let [t (tile-at x y)]
-    (move-by t (v3 0 (- 0 (.. t transform position y) 0.5) 0) 5)))
+(defn raise-tile
+  ([v h] (raise-tile (.x v) (.y v) h))
+  ([x y h] (raise-tile x y h *tile-speed*))
+  ([x y h speed]
+   (let [t (tile-at x y)]
+     (move-by t (v3 0 h 0) speed))))
+
+(defn set-tile-height
+  ([v h] (set-tile-height (.x v) (.y v) h))
+  ([x y h]
+   (let [t (tile-at x y)]
+     (position! t (v3 x h y)))))
+
+(defn reset-tile
+  ([v] (reset-tile (.x v) (.y v)))
+  ([x y] (reset-tile x y *tile-speed*))
+  ([x y speed]
+   (let [t (tile-at x y)]
+     (move-by t (v3 0 (- 0 (.. t transform position y) 0.5) 0) speed))))
+
+(defn goal-post [w z h]
+  (raise-tile (- w) z h)
+  (raise-tile w z h))
+
+(defn reset-all-tiles []
+  (dorun
+    (for [x (range -20 20)
+          y (range -20 20)]
+      (reset-tile x y))))
+
+(defn stairs
+  [x0 x1 y0 y1 f]
+  (for [x (range (min x0 x1) (max x0 x1))
+        y (range (min y0 y1) (max y1 y1))]
+    (raise-tile x y (f x y))))
 
 (defn stop-coroutines []
   (.StopAllCoroutines coro-root))
@@ -137,3 +177,11 @@
       (fn []
         (f)
         (< Time/time stop-time)))))
+
+(defn sleep-all []
+  (doseq [rb (objects-typed Rigidbody)]
+    (.Sleep rb)))
+
+(defn stop-reset []
+  (stop-coroutines)
+  (reset-all-tiles))
