@@ -11,9 +11,10 @@
            Helpers))
 
 (defn tile-at [x y]
-  (Helpers/Raycast
-    (v3 x 10 y)
-    (v3 0 -1 0)
+  (Helpers/RaycastAll
+    (Ray.
+      (v3 x 100 y)
+      (v3 0 -1 0))
     9))
 
 (defn import-namespace [n]
