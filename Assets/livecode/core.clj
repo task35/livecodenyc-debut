@@ -42,3 +42,13 @@
                       (vreset! v r)))
                   (< @i (count fns)))
         (get_Current [this] @v)))))
+
+(def sun
+  (object-named "Directional Light"))
+
+(defn until-time [f ms]
+  (let [stop-time (+ Time/time ms)]
+    (livecode.core/animate
+      (fn []
+        (f)
+        (< Time/time stop-time)))))
